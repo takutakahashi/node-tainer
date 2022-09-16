@@ -17,6 +17,15 @@ spec:
       containers:
       - name: app
         image: controller
+        env:
+          name: DRY_RUN
+          value: "true"
+        command:
+          - /node-tainter
+          - --script-path
+          - /scripts/check.sh
+          - --taint
+          - "node-tainter=failed:NoExecute"
         resources:
           limits:
             memory: 200Mi
