@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-tainter
+  namespace: node-tainter
+  labels:
+    k8s-app: node-tainter
+spec:
+  selector:
+    matchLabels:
+      node-tainter/enabled: "true"
+  template:
+    metadata:
+      labels:
+        k8s-app: node-tainter
+    spec:
+      containers:
+      - name: app
+        image: controller
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi

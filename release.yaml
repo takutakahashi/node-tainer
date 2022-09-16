@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-tainter
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    k8s-app: node-tainter
+  name: node-tainter
+  namespace: node-tainter
+spec:
+  selector:
+    matchLabels:
+      node-tainter/enabled: "true"
+  template:
+    metadata:
+      labels:
+        k8s-app: node-tainter
+    spec:
+      containers:
+      - image: ghcr.io/takutakahashi/node-tainter:beta
+        name: app
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
