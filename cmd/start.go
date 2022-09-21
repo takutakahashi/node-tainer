@@ -27,6 +27,9 @@ to quickly create a Cobra application.`,
 			logrus.Error(err)
 			os.Exit(1)
 		}
+		if scripts == nil {
+			scripts = []string{"/tmp/node-tainter/default.sh"}
+		}
 		daemon, err := cmd.Flags().GetBool("daemon")
 		if err != nil {
 			logrus.Error(err)

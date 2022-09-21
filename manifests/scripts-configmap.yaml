@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  default.sh: |-
+    #!/bin/bash
+
+    echo "write check script here"
+    exit 0
+kind: ConfigMap
+metadata:
+  name: scripts
