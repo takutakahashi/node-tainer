@@ -17,10 +17,9 @@ COPY cmd/ cmd/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o node-tainter main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM ubuntu
 WORKDIR /
+RUN apt update && apt install -y iputils-ping curl
 COPY --from=builder /workspace/node-tainter .
 USER 65532:65532
 
