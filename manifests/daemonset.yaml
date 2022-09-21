@@ -8,7 +8,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      node-tainter/enabled: "true"
+      k8s-app: node-tainter
   template:
     metadata:
       labels:
@@ -30,6 +30,7 @@ spec:
           value: "true"
         command:
           - /node-tainter
+          - start
           - --script-path
           - /scripts/default.sh
           - --taint

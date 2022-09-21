@@ -1,3 +1,4 @@
+namespace: node-tainter
 resources:
 - 00-namespace.yaml
 - daemonset.yaml
