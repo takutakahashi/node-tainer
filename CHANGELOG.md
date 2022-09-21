@@ -1,5 +1,7 @@
 # Changelog
 
+## [v0.0.8](https://github.com/takutakahashi/node-tainter/compare/v0.0.7...v0.0.8) - 2022-09-21
+
 ## [v0.0.5](https://github.com/takutakahashi/node-tainter/compare/v0.0.4...v0.0.5) - 2022-09-21
 
 ## [v0.0.4](https://github.com/takutakahashi/node-tainter/compare/v0.0.3...v0.0.4) - 2022-09-21
