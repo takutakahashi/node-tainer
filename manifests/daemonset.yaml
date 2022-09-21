@@ -26,7 +26,7 @@ spec:
       - name: app
         image: controller
         env:
-          name: DRY_RUN
+        - name: DRY_RUN
           value: "true"
         command:
           - /node-tainter
