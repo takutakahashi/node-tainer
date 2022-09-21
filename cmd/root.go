@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -44,7 +43,7 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.PersistentFlags().StringP("node-name", "n", "", "Target node name")
-	rootCmd.PersistentFlags().StringP("taint", "t", "", "Target taint")
+	rootCmd.PersistentFlags().StringP("taint", "t", "node-tainter=tainted:NoExecute", "Target taint")
 	rootCmd.PersistentFlags().StringArrayP("script-path", "s", nil, "Script file path")
 	rootCmd.PersistentFlags().BoolP("once", "o", false, "Execute once")
 	rootCmd.PersistentFlags().BoolP("daemon", "d", true, "Execute as daemon")

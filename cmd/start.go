@@ -45,9 +45,6 @@ to quickly create a Cobra application.`,
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		if taint == "" {
-			taint = "node-tainter=tainted:NoExecute"
-		}
 		node, err := cmd.Flags().GetString("node-name")
 		if err != nil {
 			logrus.Error(err)

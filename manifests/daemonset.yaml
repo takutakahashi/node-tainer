@@ -28,13 +28,17 @@ spec:
         env:
         - name: DRY_RUN
           value: "true"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         command:
           - /node-tainter
           - start
           - --script-path
           - /scripts/default.sh
-          - --taint
-          - "node-tainter=failed:NoExecute"
+          - --node-name
+          - $(NODE_NAME)
         volumeMounts:
         - name: scripts
           mountPath: /scripts
