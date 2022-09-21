@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -42,6 +41,9 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)
+		}
+		if taint == "" {
+			taint = "node-tainter=tainted:NoExecute"
 		}
 		node, err := cmd.Flags().GetString("node-name")
 		if err != nil {

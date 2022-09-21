@@ -27,7 +27,12 @@ func (m Manager) Execute() error {
 	if !m.Daemon {
 		return m.ExecuteOnce()
 	}
-	panic("not implemented")
+	for {
+		if err := m.ExecuteOnce(); err != nil {
+			logrus.Error(err)
+		}
+		time.Sleep(5 * time.Minute)
+	}
 }
 
 func (m Manager) ExecuteOnce() error {
