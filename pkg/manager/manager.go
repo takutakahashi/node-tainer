@@ -3,12 +3,14 @@ package manager
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,13 +49,17 @@ func (m Manager) ExecuteOnce() error {
 
 func (m Manager) ExecuteScripts() error {
 	for _, p := range m.ScriptPath {
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		out, err := exec.CommandContext(ctx, p).CombinedOutput()
-		logrus.Infof("%s output:", p)
-		logrus.Info(out)
+		if os.Getenv("ENABLE_EXEC_LOG") != "" {
+			logrus.Infof("%s output:", p)
+			logrus.Info(string(out))
+		}
 		if err != nil {
+			cancel()
 			return err
 		}
+		cancel()
 	}
 	return nil
 }
@@ -77,9 +83,12 @@ func (m Manager) RemoveTaint() error {
 	}
 	after := node.DeepCopy()
 	taint, err := parseTaint(m.Taint)
-	newTaints := []v1.Taint{}
+	if err != nil {
+		return err
+	}
+	newTaints := []corev1.Taint{}
 	for _, t := range after.Spec.Taints {
-		if t.Key == taint.Key && t.Value == taint.Value && t.Effect == t.Effect {
+		if hasTaint(after, taint) {
 			continue
 		}
 		newTaints = append(newTaints, t)
@@ -93,10 +102,38 @@ func (m Manager) RemoveTaint() error {
 	return err
 }
 
+func (m Manager) CanTaintNewNode() error {
+	nodes, err := m.c.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	taint, err := parseTaint(m.Taint)
+	if err != nil {
+		return err
+	}
+	taintedNodeCount := 0
+	for _, node := range nodes.Items {
+		if hasTaint(&node, taint) {
+			taintedNodeCount += 1
+		}
+	}
+	if taintedNodeCount == 3 {
+		return fmt.Errorf("tainted node count over 3")
+	}
+	return nil
+
+}
+
 func (m Manager) AddTaint() error {
 	if m.DryRun {
 		logrus.Infof("dryrun: add taint, %s, %s", m.Node, m.Taint)
 		return nil
+	}
+	if reasonWhyNot := m.CanTaintNewNode(); reasonWhyNot != nil {
+		logrus.Info("can not taint node")
+		logrus.Info(reasonWhyNot)
+		return nil
+
 	}
 	if m.c == nil {
 		clientset, err := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
@@ -112,8 +149,11 @@ func (m Manager) AddTaint() error {
 	}
 	after := node.DeepCopy()
 	taint, err := parseTaint(m.Taint)
+	if err != nil {
+		return err
+	}
 	for _, t := range after.Spec.Taints {
-		if t.Key == taint.Key && t.Value == taint.Value && t.Effect == t.Effect {
+		if hasTaint(after, t) {
 			logrus.Info("taint is already added")
 			return nil
 		}
@@ -123,31 +163,40 @@ func (m Manager) AddTaint() error {
 	return err
 }
 
-func parseTaint(taint string) (v1.Taint, error) {
+func parseTaint(taint string) (corev1.Taint, error) {
 	// taint format is key1=value1:NoSchedule
 	tmp := strings.Split(taint, "=")
 	if len(tmp) != 2 {
-		return v1.Taint{}, fmt.Errorf("format error")
+		return corev1.Taint{}, fmt.Errorf("format error")
 	}
 	tmp2 := strings.Split(tmp[1], ":")
 	if len(tmp2) != 2 {
-		return v1.Taint{}, fmt.Errorf("format error")
+		return corev1.Taint{}, fmt.Errorf("format error")
 	}
-	effect := v1.TaintEffectNoSchedule
+	effect := corev1.TaintEffectNoSchedule
 	switch tmp2[1] {
 	case "NoSchedule":
-		effect = v1.TaintEffectNoSchedule
+		effect = corev1.TaintEffectNoSchedule
 	case "NoExecute":
-		effect = v1.TaintEffectNoExecute
+		effect = corev1.TaintEffectNoExecute
 	case "PreferNoSchedule":
-		effect = v1.TaintEffectPreferNoSchedule
+		effect = corev1.TaintEffectPreferNoSchedule
 	default:
-		return v1.Taint{}, fmt.Errorf("invalid effect")
+		return corev1.Taint{}, fmt.Errorf("invalid effect")
 
 	}
-	return v1.Taint{
+	return corev1.Taint{
 		Key:    tmp[0],
 		Value:  tmp2[0],
 		Effect: effect,
 	}, nil
+}
+
+func hasTaint(node *corev1.Node, taint corev1.Taint) bool {
+	for _, t := range node.Spec.Taints {
+		if cmp.Equal(t, taint) {
+			return true
+		}
+	}
+	return false
 }
