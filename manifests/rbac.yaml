@@ -8,6 +8,7 @@ rules:
   resources:
   - nodes
   verbs:
+  - list
   - get
   - update
   - patch
