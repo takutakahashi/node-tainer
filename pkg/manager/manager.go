@@ -103,6 +103,13 @@ func (m Manager) RemoveTaint() error {
 }
 
 func (m Manager) CanTaintNewNode() error {
+	if m.c == nil {
+		clientset, err := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
+		if err != nil {
+			return nil
+		}
+		m.c = clientset
+	}
 	nodes, err := m.c.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
