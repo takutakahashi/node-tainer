@@ -50,12 +50,18 @@ to quickly create a Cobra application.`,
 			logrus.Error(err)
 			os.Exit(1)
 		}
+		maxTaintedNodeCount, err := cmd.Flags().GetInt("max-tainted-nodes")
+		if err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
 		m := manager.Manager{
-			ScriptPath: scripts,
-			Daemon:     daemon && !once,
-			Taint:      taint,
-			Node:       node,
-			DryRun:     os.Getenv("DRY_RUN") == "true",
+			ScriptPath:          scripts,
+			Daemon:              daemon && !once,
+			Taint:               taint,
+			Node:                node,
+			DryRun:              os.Getenv("DRY_RUN") == "true",
+			MaxTaintedNodeCount: maxTaintedNodeCount,
 		}
 		if err := m.Execute(); err != nil {
 			logrus.Error(err)

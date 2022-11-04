@@ -47,4 +47,5 @@ func init() {
 	rootCmd.PersistentFlags().StringArrayP("script-path", "s", nil, "Script file path")
 	rootCmd.PersistentFlags().BoolP("once", "o", false, "Execute once")
 	rootCmd.PersistentFlags().BoolP("daemon", "d", true, "Execute as daemon")
+	rootCmd.PersistentFlags().IntP("max-tainted-nodes", "m", 3, "Max count of nodes to be tainted")
 }

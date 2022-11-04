@@ -17,12 +17,13 @@ import (
 )
 
 type Manager struct {
-	ScriptPath []string
-	Taint      string
-	Node       string
-	Daemon     bool
-	DryRun     bool
-	c          *kubernetes.Clientset
+	ScriptPath          []string
+	Taint               string
+	Node                string
+	Daemon              bool
+	DryRun              bool
+	MaxTaintedNodeCount int
+	c                   *kubernetes.Clientset
 }
 
 func (m Manager) Execute() error {
@@ -124,8 +125,8 @@ func (m Manager) CanTaintNewNode() error {
 			taintedNodeCount += 1
 		}
 	}
-	if taintedNodeCount == 3 {
-		return fmt.Errorf("tainted node count over 3")
+	if taintedNodeCount == m.MaxTaintedNodeCount {
+		return fmt.Errorf("tainted node count over %d", m.MaxTaintedNodeCount)
 	}
 	return nil
 
