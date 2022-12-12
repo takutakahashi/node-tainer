@@ -22,6 +22,15 @@ and apply it.
 kubectl apply -f scripts-configmap.yaml
 ```
 
-You should manage them with kustomize.
+You should manage them with kustomize. For example:
+
+```kustomization.yaml
+
+resources:
+- https://github.com/takutakahashi/node-tainter//manifests/
+
+patches:
+- scripts-configmap.yaml
+```
 
 ### That's it!
