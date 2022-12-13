@@ -14,6 +14,8 @@ spec:
       labels:
         k8s-app: node-tainter
     spec:
+      nodeSelector:
+        node-tainter/enabled: "true"
       serviceAccountName: node-tainter
       volumes:
       - name: scripts
