@@ -16,7 +16,7 @@ jobs:
       - uses: docker/metadata-action@v3
         id: meta
         with:
-          images: ghcr.io/pepabo/k8s-github-auth
+          images: ghcr.io/takutakahashi/node-tainter
           tags: |
             type=semver,pattern={{raw}}
       -
