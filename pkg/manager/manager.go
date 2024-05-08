@@ -27,6 +27,20 @@ type Executor struct {
 	Node   string
 }
 
+func NewManager(configs []*config.Config, node string, daemon, dryrun bool, c kubernetes.Interface) Manager {
+	execs := []Executor{}
+	for _, c := range configs {
+		execs = append(execs, Executor{Config: c})
+	}
+	return Manager{
+		execs:  execs,
+		Node:   node,
+		Daemon: daemon,
+		DryRun: dryrun,
+		c:      c,
+	}
+}
+
 func (ma Manager) Execute(ctx context.Context) error {
 	if !ma.Daemon {
 		return ma.ExecuteOnce(ctx)
