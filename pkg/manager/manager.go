@@ -19,7 +19,7 @@ type Manager struct {
 	Node   string
 	Daemon bool
 	DryRun bool
-	c      *kubernetes.Clientset
+	c      kubernetes.Interface
 }
 
 type Executor struct {
@@ -47,7 +47,7 @@ func (ma Manager) ExecuteOnce(ctx context.Context) error {
 	labels := node.GetLabels()
 	taints := node.Spec.Taints
 	for _, e := range ma.execs {
-		if affected, err := affectedNodeCountExceeded(
+		if affected, err := AffectedNodeCountExceeded(
 			ctx, ma.c, e.Config.MaxAffectedNodeCount, e.Config.Taints, e.Config.Labels); err != nil {
 			return err
 		} else if affected {
@@ -55,11 +55,11 @@ func (ma Manager) ExecuteOnce(ctx context.Context) error {
 			continue
 		}
 		if err := e.ExecuteScripts(ctx); err != nil {
-			taints = addTaints(taints, e.Config.Taints)
-			labels = addLabels(labels, e.Config.Labels)
+			taints = AddTaints(taints, e.Config.Taints)
+			labels = AddLabels(labels, e.Config.Labels)
 		} else {
-			taints = removeTaints(taints, e.Config.Taints)
-			labels = removeLabels(labels, e.Config.Labels)
+			taints = RemoveTaints(taints, e.Config.Taints)
+			labels = RemoveLabels(labels, e.Config.Labels)
 		}
 	}
 	if ma.DryRun {
@@ -83,19 +83,16 @@ func (ma Manager) ExecuteOnce(ctx context.Context) error {
 	return nil
 }
 
-func affectedNodeCountExceeded(ctx context.Context, c *kubernetes.Clientset, max int, taints []v1.Taint, labels map[string]string) (bool, error) {
+func AffectedNodeCountExceeded(ctx context.Context, c kubernetes.Interface, max int, taints []v1.Taint, labels map[string]string) (bool, error) {
 	nodes, err := c.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return false, err
 	}
 	count := 0
 	for _, node := range nodes.Items {
-		if count >= max {
-			return true, nil
-		}
 		if len(taints) > 0 {
 			for _, t := range taints {
-				if !taintExists(node.Spec.Taints, t) {
+				if !TaintExists(node.Spec.Taints, t) {
 					continue
 				}
 			}
@@ -109,17 +106,28 @@ func affectedNodeCountExceeded(ctx context.Context, c *kubernetes.Clientset, max
 		}
 		count++
 	}
-	return false, nil
+	logrus.Infof("affected node count: %d", count)
+	logrus.Infof("max affected node count: %d", max)
+	logrus.Infof("result: %t", count > max)
+	return count > max, nil
 
 }
 
-func taintExists(taints []v1.Taint, t v1.Taint) bool {
+func TaintExists(taints []v1.Taint, t v1.Taint) bool {
 	for _, tt := range taints {
-		if tt.Key == t.Key {
+		if taintEquals(tt, t) {
 			return true
 		}
 	}
 	return false
+}
+
+func taintEquals(t1, t2 corev1.Taint) bool {
+	return t1.Key == t2.Key && t1.Value == t2.Value && t1.Effect == t2.Effect
+}
+
+func taintString(t corev1.Taint) string {
+	return t.Key + ":" + t.Value + ":" + string(t.Effect)
 }
 
 func (m Executor) ExecuteScripts(ctx context.Context) error {
@@ -139,24 +147,13 @@ func (m Executor) ExecuteScripts(ctx context.Context) error {
 	return nil
 }
 
-func uniq(taints []corev1.Taint) []corev1.Taint {
+func RemoveTaints(taints []corev1.Taint, removeTaints []corev1.Taint) []corev1.Taint {
 	m := map[string]corev1.Taint{}
 	for _, t := range taints {
-		m[t.Key] = t
-	}
-	ret := []corev1.Taint{}
-	for _, v := range m {
-		ret = append(ret, v)
-	}
-	return ret
-}
-func removeTaints(taints []corev1.Taint, removeTaints []corev1.Taint) []corev1.Taint {
-	m := map[string]corev1.Taint{}
-	for _, t := range taints {
-		m[t.Key] = t
+		m[taintString(t)] = t
 	}
 	for _, t := range removeTaints {
-		delete(m, t.Key)
+		delete(m, taintString(t))
 	}
 	ret := []corev1.Taint{}
 	for _, v := range m {
@@ -165,20 +162,20 @@ func removeTaints(taints []corev1.Taint, removeTaints []corev1.Taint) []corev1.T
 	return ret
 }
 
-func removeLabels(labels map[string]string, removeLabels map[string]string) map[string]string {
+func RemoveLabels(labels map[string]string, removeLabels map[string]string) map[string]string {
 	for k := range removeLabels {
 		delete(labels, k)
 	}
 	return labels
 }
 
-func addTaints(taints []corev1.Taint, addTaints []corev1.Taint) []corev1.Taint {
+func AddTaints(taints []corev1.Taint, addTaints []corev1.Taint) []corev1.Taint {
 	m := map[string]corev1.Taint{}
 	for _, t := range taints {
-		m[t.Key] = t
+		m[taintString(t)] = t
 	}
 	for _, t := range addTaints {
-		m[t.Key] = t
+		m[taintString(t)] = t
 	}
 	ret := []corev1.Taint{}
 	for _, v := range m {
@@ -187,7 +184,7 @@ func addTaints(taints []corev1.Taint, addTaints []corev1.Taint) []corev1.Taint {
 	return ret
 }
 
-func addLabels(labels map[string]string, addLabels map[string]string) map[string]string {
+func AddLabels(labels map[string]string, addLabels map[string]string) map[string]string {
 	for k, v := range addLabels {
 		labels[k] = v
 	}
