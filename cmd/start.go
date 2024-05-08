@@ -8,7 +8,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/takutakahashi/node-tainter/pkg/config"
 	"github.com/takutakahashi/node-tainter/pkg/manager"
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // startCmd represents the start command
@@ -22,25 +25,12 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		scripts, err := cmd.Flags().GetStringArray("script-path")
-		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
-		}
-		if scripts == nil {
-			scripts = []string{"/tmp/node-tainter/default.sh"}
-		}
-		daemon, err := cmd.Flags().GetBool("daemon")
-		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
-		}
 		once, err := cmd.Flags().GetBool("once")
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		taint, err := cmd.Flags().GetString("taint")
+		dryrun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)
@@ -50,20 +40,28 @@ to quickly create a Cobra application.`,
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		maxTaintedNodeCount, err := cmd.Flags().GetInt("max-tainted-nodes")
+		clientset, err := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		m := manager.Manager{
-			ScriptPath:          scripts,
-			Daemon:              daemon && !once,
-			Taint:               taint,
-			Node:                node,
-			DryRun:              os.Getenv("DRY_RUN") == "true",
-			MaxTaintedNodeCount: maxTaintedNodeCount,
+		configInputs, err := cmd.Flags().GetStringArray("config")
+		if err != nil {
+			logrus.Error(err)
+			os.Exit(1)
 		}
-		if err := m.Execute(); err != nil {
+		configs := []*config.Config{}
+		for _, configPath := range configInputs {
+			config, err := config.LoadConfig(configPath)
+			if err != nil {
+				logrus.Error(err)
+				os.Exit(1)
+			}
+			configs = append(configs, config)
+		}
+		ctx := cmd.Context()
+		m := manager.NewManager(configs, node, once, dryrun, clientset)
+		if err := m.Execute(ctx); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
