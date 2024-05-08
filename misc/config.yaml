@@ -1,0 +1,20 @@
+configs:
+  - scriptPath:
+      - ./scripts/ok.sh
+    maxAffectedNodeCount: 20
+    targetNodeLabels:
+      node-tainter: enabled
+      node-tainter-role: workload
+    labels:
+      - node-tainter-label: ng
+  - scriptPath:
+      - ./scripts/ok.sh
+    maxAffectedNodeCount: 3
+    targetNodeLabels:
+      node-tainter: enabled
+      node-tainter-role: workload
+    taints:
+      - key: key1
+        operator: Equal
+        value: value1
+        effect: NoSchedule
