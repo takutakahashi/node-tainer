@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/k1LoW/slkm"
 	"github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -22,8 +24,11 @@ type Manager struct {
 	Node                string
 	Daemon              bool
 	DryRun              bool
+	SlackWebhook        string
+	SlackChannel        string
 	MaxTaintedNodeCount int
 	c                   *kubernetes.Clientset
+	notified            bool
 }
 
 func (m Manager) Execute() error {
@@ -46,6 +51,37 @@ func (m Manager) ExecuteOnce() error {
 	logrus.Info(err)
 	logrus.Info("start taint")
 	return m.AddTaint()
+}
+
+func (m Manager) NotifySlack(message string) error {
+	if m.SlackWebhook == "" || m.SlackChannel == "" {
+		return nil
+	}
+	if m.DryRun && m.notified {
+		return nil
+	}
+	ctx := context.Background()
+	c, err := slkm.New()
+	if err != nil {
+		return err
+	}
+	if m.DryRun {
+		c.SetUsername("[DRY-RUN] node-tainter")
+
+	} else {
+		c.SetUsername("node-tainter")
+	}
+	c.SetWebhookURL(m.SlackWebhook)
+	blocks := []slack.Block{
+		slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", message, false, false), nil, nil),
+	}
+	if err := c.PostMessage(ctx, m.SlackChannel, blocks...); err != nil {
+		return err
+	}
+	if m.DryRun {
+		m.notified = true
+	}
+	return nil
 }
 
 func (m Manager) ExecuteScripts() error {
@@ -135,6 +171,11 @@ func (m Manager) CanTaintNewNode() error {
 func (m Manager) AddTaint() error {
 	if m.DryRun {
 		logrus.Infof("dryrun: add taint, %s, %s", m.Node, m.Taint)
+		if err := m.NotifySlack(
+			fmt.Sprintf("Node *%s* has been tainted", m.Node),
+		); err != nil {
+			logrus.Error(err)
+		}
 		return nil
 	}
 	if reasonWhyNot := m.CanTaintNewNode(); reasonWhyNot != nil {
@@ -168,6 +209,11 @@ func (m Manager) AddTaint() error {
 	}
 	after.Spec.Taints = append(after.Spec.Taints, taint)
 	_, err = m.c.CoreV1().Nodes().Update(ctx, after, metav1.UpdateOptions{})
+	if nerr := m.NotifySlack(
+		fmt.Sprintf("Node *%s* has been tainted", m.Node),
+	); err != nil {
+		logrus.Error(nerr)
+	}
 	return err
 }
 
