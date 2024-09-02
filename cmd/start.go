@@ -61,6 +61,8 @@ to quickly create a Cobra application.`,
 			Taint:               taint,
 			Node:                node,
 			DryRun:              os.Getenv("DRY_RUN") == "true",
+			SlackWebhook:        os.Getenv("SLACK_WEBHOOK_URL"),
+			SlackChannel:        os.Getenv("SLACK_CHANNEL"),
 			MaxTaintedNodeCount: maxTaintedNodeCount,
 		}
 		if err := m.Execute(); err != nil {
