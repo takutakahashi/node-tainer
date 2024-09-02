@@ -1,0 +1,13 @@
+name: "build"
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    uses: takutakahashi/github-actions/.github/workflows/ghcr.yaml@main
+    with:
+      path: .
+      image: takutakahashi/node-tainter/node-tainter:${{ github.SHA }}
+
