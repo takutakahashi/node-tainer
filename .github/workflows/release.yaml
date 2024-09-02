@@ -37,7 +37,7 @@ jobs:
       - name: Build manifests
         run: |
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          make release IMG=ghcr.io/${{ steps.branch_name.outputs.IMAGE_NAME }}:${GITHUB_REF#refs/tags/}
+          make release IMG=ghcr.io/takutakahashi/node-tainter:${GITHUB_REF#refs/tags/}
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
