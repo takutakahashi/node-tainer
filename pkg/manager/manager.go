@@ -28,6 +28,7 @@ type Manager struct {
 	SlackChannel        string
 	MaxTaintedNodeCount int
 	c                   *kubernetes.Clientset
+	notified            bool
 }
 
 func (m Manager) Execute() error {
@@ -56,6 +57,9 @@ func (m Manager) NotifySlack(message string) error {
 	if m.SlackWebhook == "" || m.SlackChannel == "" {
 		return nil
 	}
+	if m.DryRun && m.notified {
+		return nil
+	}
 	ctx := context.Background()
 	c, err := slkm.New()
 	if err != nil {
@@ -73,6 +77,9 @@ func (m Manager) NotifySlack(message string) error {
 	}
 	if err := c.PostMessage(ctx, m.SlackChannel, blocks...); err != nil {
 		return err
+	}
+	if m.DryRun {
+		m.notified = true
 	}
 	return nil
 }
